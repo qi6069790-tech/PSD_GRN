@@ -1,4 +1,4 @@
-# PSD_GRN
+# PSD_GRN: Pseudotime-Enhanced Signed Directed Graph Learning for Gene Regulatory Network Inference
 
 ## Environment
 - Python 3.9.25
