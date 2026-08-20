@@ -38,7 +38,7 @@ def undirected_label2directed_label(adj: scipy.sparse.csr_matrix, edge_pairs: Li
                 1 (the negative directed edge exists in the graph), 2 (the positive edge of the reversed direction exists),
                 3 (the edge of the reversed direction exists), 4 (the edge doesn't exist in both directions).
                 The undirected edges in the directed input graph are removed to avoid ambiguity.
-            * If task == "sign": 0 (negative edge), 1 (positive edge).
+            * If task == "sign": 0 (negative edge), 1 (positive edge), 2 (no edge).
         * **label_weight** (List) - The weight list of the query edges. The weight is zero if the directed edge
             doesn't exist in both directions.
         * **undirected** (List) - The undirected edges list within the input graph.
@@ -144,12 +144,12 @@ def undirected_label2directed_label(adj: scipy.sparse.csr_matrix, edge_pairs: Li
         undirected = []
         neg_edges = (
                 np.abs(np.array(adj[edge_pairs[:, 0], edge_pairs[:, 1]]).flatten()) == 0)
-        labels = np.ones(len(edge_pairs), dtype=np.int32) # 正
-        labels[neg_edges] = 2 # 负样本 0
+        labels = np.ones(len(edge_pairs), dtype=np.int32) # positive
+        labels[neg_edges] = 2 # negative sample 0
         new_edge_pairs = edge_pairs
         label_weight = np.array(
             adj[edge_pairs[:, 0], edge_pairs[:, 1]]).flatten()
-        labels[label_weight < 0] = 0 # 负
+        labels[label_weight < 0] = 0 # negative
         if adj.data.min() < 0:  # signed graph
             assert label_weight[labels == 0].max() < 0
         assert label_weight[labels == 1].min() > 0
@@ -305,16 +305,16 @@ def link_class_split(data: torch_geometric.data.Data, size: int = None, splits: 
 
         all_edges = list(map(tuple, all_edge_index))
 
-        # 用两个方向只用于从 nmst 中排除，避免验证/测试拆掉保连通边
+        # Use both directions only for exclusion from nmst to prevent validation/test splits from removing connectivity-preserving edges
         mst_both = mst_undir + [t[::-1] for t in mst_undir]
         mst_both = list(set(mst_both))
 
-        # nmst 仍然排除两个方向，保持原来的保连通逻辑
+        # nmst still excludes both directions, preserving the original connectivity-maintenance logic
         nmst = list(set(all_edges) - set(mst_both))
 
-        # 关键修改：
-        # 真正加入训练集的 mst 只能是金标准中真实存在的有向边。
-        # 如果只有 A->B，没有 B->A，则 B->A 不再作为训练样本加入。
+        # Key modification:
+        # The mst edges actually added to the training set must be directed edges that truly exist in the gold standard.
+        # If only A->B exists and B->A does not, then B->A is no longer added as a training sample.
         mst = [
             (int(u), int(v))
             for u, v in mst_both
@@ -381,7 +381,7 @@ def link_class_split(data: torch_geometric.data.Data, size: int = None, splits: 
             test_pos_edges = pos_val_edges[:len_test_pos].copy()
             test_neg_edges = neg_val_edges[:len_test_neg].copy()
 
-            # 严格控制：无边样本数 = 正调控样本数 + 负调控样本数
+            # Strict control: number of no-edge samples = number of positive regulatory samples + number of negative regulatory samples
             test_noedge_num = len(test_pos_edges) + len(test_neg_edges)
 
             ids_test = np.array(
@@ -399,7 +399,7 @@ def link_class_split(data: torch_geometric.data.Data, size: int = None, splits: 
             val_pos_edges = pos_val_edges[len_test_pos:len_test_pos + len_val_pos].copy()
             val_neg_edges = neg_val_edges[len_test_neg:len_test_neg + len_val_neg].copy()
 
-            # 严格控制：无边样本数 = 正调控样本数 + 负调控样本数
+            # Strict control: number of no-edge samples = number of positive regulatory samples + number of negative regulatory samples
             val_noedge_num = len(val_pos_edges) + len(val_neg_edges)
 
             ids_val = np.array(
@@ -417,17 +417,17 @@ def link_class_split(data: torch_geometric.data.Data, size: int = None, splits: 
             train_pos_edges = pos_val_edges[len_test_pos + len_val_pos:].copy()
             train_neg_edges = neg_val_edges[len_test_neg + len_val_neg:].copy()
 
-            # 注意：这里的 mst 应该已经在前面改成“只包含真实存在的有向边”
+            # Note: mst should already have been changed above to "contain only truly existing directed edges"
             mst_train_edges = list(mst)
 
             train_true_edges = train_pos_edges + train_neg_edges + mst_train_edges
 
-            # 严格控制：无边样本数 = 正调控样本数 + 负调控样本数
+            # Strict control: number of no-edge samples = number of positive regulatory samples + number of negative regulatory samples
             train_noedge_num = len(train_true_edges)
 
             if len(neg_edges) < neg_cursor + train_noedge_num:
                 raise ValueError(
-                    f"严格有向无边样本不足: need={neg_cursor + train_noedge_num}, "
+                    f"Insufficient strict directed no-edge samples: need={neg_cursor + train_noedge_num}, "
                     f"available={len(neg_edges)}"
                 )
 
@@ -460,9 +460,9 @@ def link_class_split(data: torch_geometric.data.Data, size: int = None, splits: 
 
                 if n_no_edge != n_neg_reg + n_pos_reg:
                     raise RuntimeError(
-                        f"{part_name} 3C sign 样本比例错误: "
+                        f"{part_name} 3C sign sample ratio error: "
                         f"negative={n_neg_reg}, positive={n_pos_reg}, no_edge={n_no_edge}. "
-                        f"要求 no_edge = negative + positive."
+                        f"Required: no_edge = negative + positive."
                     )
 
         # convert back to directed graph
