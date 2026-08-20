@@ -49,7 +49,7 @@ if os.path.isdir(log_path) == False:
 
 def calculate_metrics(test_y, pred, out, num_classes):
     if num_classes != 2:
-        raise ValueError(f"当前指标函数仅用于 2C 任务，实际 num_classes={num_classes}")
+        raise ValueError(f"The current metric function is only for the 2C task; actual num_classes={num_classes}")
 
     if torch.is_tensor(test_y):
         test_y_np = test_y.cpu().numpy().astype(int)
@@ -60,7 +60,7 @@ def calculate_metrics(test_y, pred, out, num_classes):
     prob = torch.softmax(out, dim=1).detach().cpu().numpy()
 
     if prob.shape[1] != 2:
-        raise ValueError(f"2C 任务要求模型输出维度为 2，实际 out.shape={out.shape}")
+        raise ValueError(f"The 2C task requires the model output dimension to be 2; actual out.shape={out.shape}")
 
 
     auc_list = []
@@ -118,22 +118,11 @@ def calculate_metrics(test_y, pred, out, num_classes):
         index=[f'True_{i}' for i in present_labels],
         columns=[f'Pred_{i}' for i in present_labels]
     )
-    print("混淆矩阵 Confusion Matrix:")
     print(cm_df)
-
-    print("有效AUC类别:", valid_classes)
-    print("AUPR计算类别: class 1 / 有边正类")
-
     return f1, auc, aupr, aupr_ratio, precision, mcc, recall, epr
 
 
 def read_gold_table(path):
-    """
-    兼容以下情况：
-    1. 有表头：source,target,sign
-    2. 有表头：其他名称的源节点列,target,sign
-    3. 无表头：三列 source,target,sign
-    """
     df_try = pd.read_csv(path)
     cols_lower = [str(c).strip().lower() for c in df_try.columns]
     col_map = {str(c).strip().lower(): c for c in df_try.columns}
@@ -171,7 +160,7 @@ def load_gene_name_gold_standard(net_data_path, expression_path,
     net = net.dropna(subset=['source', 'target', 'sign'])
     net = net[net['sign'].isin([-1, 1])].copy()
 
-    print(f'原始金标准边数: {len(net)}')
+    print(f'Original number of gold-standard edges: {len(net)}')
 
     expr = pd.read_csv(expression_path, header=0, index_col=0)
     expr.index = expr.index.astype(str).str.strip()
@@ -187,16 +176,16 @@ def load_gene_name_gold_standard(net_data_path, expression_path,
     col_overlap = len(gold_genes.intersection(set(expr_columns_upper)))
 
     if index_overlap == 0 and col_overlap == 0:
-        raise ValueError("金标准基因名和表达矩阵的行名/列名都对不上，请检查命名体系。")
+        raise ValueError("The gold-standard gene names do not match either the row names or column names of the expression matrix. Please check the naming convention.")
 
     if index_overlap >= col_overlap:
 
         gene_names = expr_index_upper.tolist()
-        print("检测到表达矩阵格式: gene × cell")
+        print("Detected expression matrix format: gene × cell")
     else:
 
         gene_names = expr_columns_upper.tolist()
-        print("检测到表达矩阵格式: cell × gene")
+        print("Detected expression matrix format: cell × gene")
 
 
     gene_names = [str(g).strip().upper() for g in gene_names]
@@ -210,7 +199,7 @@ def load_gene_name_gold_standard(net_data_path, expression_path,
     net = net.dropna(subset=['source_id', 'target_id']).copy()
     after_map = len(net)
 
-    print(f'映射前边数: {before_map}, 映射到表达矩阵后边数: {after_map}')
+    print(f'Number of edges before mapping: {before_map}, number of edges after mapping to the expression matrix: {after_map}')
 
     net['source_id'] = net['source_id'].astype(int)
     net['target_id'] = net['target_id'].astype(int)
@@ -219,7 +208,7 @@ def load_gene_name_gold_standard(net_data_path, expression_path,
     sign_nunique = net.groupby(['source_id', 'target_id'])['sign'].nunique()
     conflict_pairs = sign_nunique[sign_nunique > 1].index.tolist()
 
-    print(f'冲突边对数: {len(conflict_pairs)}')
+    print(f'Number of conflicting edge pairs: {len(conflict_pairs)}')
 
     if len(conflict_pairs) > 0:
         conflict_pairs_df = pd.DataFrame(conflict_pairs, columns=['source_id', 'target_id'])
@@ -234,7 +223,7 @@ def load_gene_name_gold_standard(net_data_path, expression_path,
             conflict_df[['source', 'target', 'sign']].drop_duplicates().to_csv(
                 conflict_out_path, index=False
             )
-            print(f'冲突边已保存到: {conflict_out_path}')
+            print(f'Conflicting edges saved to: {conflict_out_path}')
 
         pair_set = set(conflict_pairs)
         keep_mask = [
@@ -247,14 +236,14 @@ def load_gene_name_gold_standard(net_data_path, expression_path,
     net = net.drop_duplicates(subset=['source_id', 'target_id', 'sign']).copy()
     after_dedup = len(net)
 
-    print(f'删除冲突后边数: {before_dedup}')
-    print(f'去重后边数: {after_dedup}')
+    print(f'Number of edges after removing conflicts: {before_dedup}')
+    print(f'Number of edges after deduplication: {after_dedup}')
 
     if clean_out_path is not None:
         net[['source', 'target', 'sign']].to_csv(
             clean_out_path, index=False
         )
-        print(f'干净金标准已保存到: {clean_out_path}')
+        print(f'Clean gold standard saved to: {clean_out_path}')
 
     rows = net['source_id'].values
     cols = net['target_id'].values
@@ -282,7 +271,7 @@ def build_one_graph_features(expression_path, pseudotime_path, num_nodes, n_bins
 
     if expr.shape[0] != num_nodes:
         raise ValueError(
-            f"表达矩阵基因数({expr.shape[0]})和图节点数({num_nodes})不一致，请检查方向/节点映射/基因顺序。"
+            f"The number of genes in the expression matrix ({expr.shape[0]}) does not match the number of graph nodes ({num_nodes}). Please check the orientation/node mapping/gene order."
         )
 
     pt = pd.read_csv(pseudotime_path)
@@ -318,7 +307,7 @@ def build_one_graph_features(expression_path, pseudotime_path, num_nodes, n_bins
 
     common_cells = [c for c in pt['cell'].tolist() if c in expr.columns]
     if len(common_cells) == 0:
-        raise ValueError("pseudotime 文件里的细胞名和表达矩阵列名一个都对不上，请检查文件。")
+        raise ValueError("None of the cell names in the pseudotime file match the expression matrix column names. Please check the files.")
 
     pt = pt[pt['cell'].isin(common_cells)].sort_values('pseudotime')
     sorted_cells = pt['cell'].tolist()
@@ -333,7 +322,7 @@ def build_one_graph_features(expression_path, pseudotime_path, num_nodes, n_bins
 
     n_bins = min(n_bins, len(sorted_cells))
     if n_bins <= 0:
-        raise ValueError("有效 pseudotime 细胞数为 0，无法构造动态特征。")
+        raise ValueError("The number of valid pseudotime cells is 0; dynamic features cannot be constructed.")
 
     bins = np.array_split(np.arange(len(sorted_cells)), n_bins)
 
@@ -382,12 +371,12 @@ def build_one_graph_features(expression_path, pseudotime_path, num_nodes, n_bins
 
 def ensure_query_edges_shape(query_edges):
     if query_edges.dim() != 2:
-        raise ValueError(f"query_edges 维度错误: {query_edges.shape}")
+        raise ValueError(f"Invalid query_edges dimensions: {query_edges.shape}")
 
     if query_edges.size(0) == 2 and query_edges.size(1) != 2:
         query_edges = query_edges.t().contiguous()
     elif query_edges.size(1) != 2:
-        raise ValueError(f"query_edges 应为 [E,2] 或 [2,E]，实际为 {query_edges.shape}")
+        raise ValueError(f"query_edges should have shape [E,2] or [2,E]; actual shape is {query_edges.shape}")
 
     return query_edges.long()
 
@@ -396,13 +385,13 @@ def extract_pos_neg_edges(edge_index, edge_weight):
     edge_weight = edge_weight.detach().cpu().float().view(-1)
 
     if edge_index.dim() != 2:
-        raise ValueError(f"edge_index 维度错误: {edge_index.shape}")
+        raise ValueError(f"Invalid edge_index dimensions: {edge_index.shape}")
 
     if edge_index.size(0) != 2 and edge_index.size(1) == 2:
         edge_index = edge_index.t().contiguous()
 
     if edge_index.size(0) != 2:
-        raise ValueError(f"edge_index 应为 [2,E] 或 [E,2]，实际为 {edge_index.shape}")
+        raise ValueError(f"edge_index should have shape [2,E] or [E,2]; actual shape is {edge_index.shape}")
 
     pos_mask = edge_weight > 0
     neg_mask = edge_weight < 0
@@ -462,24 +451,24 @@ def _edge_tensor_to_np_edges(edges):
         edges = torch.tensor(edges, dtype=torch.long)
     edges = edges.detach().cpu().long()
     if edges.dim() != 2:
-        raise ValueError(f"edges 维度错误: {edges.shape}")
+        raise ValueError(f"Invalid edges dimensions: {edges.shape}")
     if edges.size(0) == 2 and edges.size(1) != 2:
         edges = edges.t().contiguous()
     if edges.size(1) != 2:
-        raise ValueError(f"edges 应为 [E,2] 或 [2,E]，实际为 {edges.shape}")
+        raise ValueError(f"edges should have shape [E,2] or [2,E]; actual shape is {edges.shape}")
     return edges.numpy().astype(np.int64)
 
 
 def _sample_strict_directed_negative_edges(num_nodes, num_samples, forbidden_pairs, rng):
     """
-    严格有向负采样：负样本候选池为所有 A[i,j] = 0 的有序基因对。
-    只排除：
-      1) self-loop，即 i == j；
-      2) 金标准中已经存在的同向有向边 (i,j)；
-      3) 当前已经采过的负样本。
+    Strict directed negative sampling: the negative-sample candidate pool contains all ordered gene pairs with A[i,j] = 0.
+    Exclude only:
+      1) self-loops, i.e., i == j;
+      2) same-direction directed edges (i,j) already present in the gold standard;
+      3) negative samples that have already been sampled.
 
-    注意：如果金标准只有 A->B，没有 B->A，那么 (B,A) 不会因为 (A,B) 存在而被排除，
-    因此 B->A 可以作为 no-edge 负样本。
+    Note: if the gold standard contains only A->B and not B->A, then (B,A) is not excluded because (A,B) exists,
+    so B->A can be used as a no-edge negative sample.
     """
     if num_samples <= 0:
         return np.empty((0, 2), dtype=np.int64)
@@ -488,8 +477,8 @@ def _sample_strict_directed_negative_edges(num_nodes, num_samples, forbidden_pai
     max_possible = num_nodes * (num_nodes - 1) - len(forbidden_pairs)
     if num_samples > max_possible:
         raise ValueError(
-            f"严格有向负采样候选不足: need={num_samples}, available≈{max_possible}. "
-            "请减小负采样数量或检查图规模。"
+            f"Insufficient candidates for strict directed negative sampling: need={num_samples}, available≈{max_possible}. "
+            "Please reduce the number of negative samples or check the graph size."
         )
 
     trials = 0
@@ -528,7 +517,7 @@ def _sample_strict_directed_negative_edges(num_nodes, num_samples, forbidden_pai
         need = num_samples - len(neg_edges)
         if len(remaining) < need:
             raise ValueError(
-                f"严格有向负采样候选不足: need={num_samples}, got={len(neg_edges) + len(remaining)}"
+                f"Insufficient candidates for strict directed negative sampling: need={num_samples}, got={len(neg_edges) + len(remaining)}"
             )
         rng.shuffle(remaining)
         neg_edges.extend(remaining[:need])
@@ -556,14 +545,14 @@ def _shuffle_edges_and_labels(pos_edges, neg_edges, rng, device):
 
 def replace_existence_negatives_with_strict_directed(link_data, original_edge_index, num_nodes, seed, device):
     """
-    保留 link_class_split 产生的正样本划分和训练图，只替换 2C existence 中的负样本。
+    Keep the positive-sample splits and training graph produced by link_class_split, and replace only the negative samples in 2C existence.
 
-    原始 torch_geometric_signed_directed 的负采样会先 to_undirected(edge_index)，
-    因此如果 A->B 已存在，B->A 通常不会作为负样本。
+    The original negative sampling in torch_geometric_signed_directed first applies to_undirected(edge_index),
+    so if A->B exists, B->A is usually not used as a negative sample.
 
-    本函数改成严格有向负采样：
-      负样本候选池 = {(i,j) | i != j 且原始金标准中不存在 i->j}
-    因此如果只有 A->B，没有 B->A，则 B->A 可以被采为 no-edge。
+    This function uses strict directed negative sampling:
+      negative-sample candidate pool = {(i,j) | i != j and i->j does not exist in the original gold standard}
+    Therefore, if only A->B exists and B->A does not, B->A can be sampled as no-edge.
     """
     original_edges_np = _edge_tensor_to_np_edges(original_edge_index)
     pos_pair_set = set((int(u), int(v)) for u, v in original_edges_np.tolist() if int(u) != int(v))
@@ -595,7 +584,7 @@ def replace_existence_negatives_with_strict_directed(link_data, original_edge_in
 
             if len(strict_neg_edges) != len(pos_edges):
                 raise RuntimeError(
-                    f"{part} 正负样本数量不一致: "
+                    f"{part} positive and negative sample counts do not match: "
                     f"positive={len(pos_edges)}, negative={len(strict_neg_edges)}"
                 )
 
@@ -628,9 +617,9 @@ def generate_and_save_link_data(data, task, args, device, save_data_path, save_d
 
     if data.edge_index.numel() == 0 or data.edge_index.size(1) == 0:
         raise ValueError(
-            "当前图中没有任何边，不能执行 link_class_split。"
-            "请检查金标准 source/target 是否成功匹配到表达矩阵基因名，"
-            "以及过滤后 gold_df 是否为空。"
+            "The current graph contains no edges, so link_class_split cannot be executed."
+            "Please check whether the gold-standard source/target genes were successfully matched to the gene names in the expression matrix, "
+            "and whether gold_df is empty after filtering."
         )
 
 
@@ -841,18 +830,18 @@ class PSDGRNLinkPredictor(nn.Module):
 
         if one_graph_features.dim() != 3:
             raise ValueError(
-                f"one_graph_features 应为 [num_nodes, num_stages, stage_feature_dim]，"
-                f"实际为 {one_graph_features.shape}"
+                f"one_graph_features should have shape [num_nodes, num_stages, stage_feature_dim]; "
+                f"actual value is {one_graph_features.shape}"
             )
 
         if one_graph_features.size(1) != self.num_stages:
             raise ValueError(
-                f"one_graph_features 的 stage 数应为 {self.num_stages}，"
-                f"实际为 {one_graph_features.size(1)}"
+                f"The number of stages in one_graph_features should be {self.num_stages}，"
+                f"actual value is {one_graph_features.size(1)}"
             )
 
         if query_edges.dim() != 2:
-            raise ValueError(f"query_edges 维度错误: {query_edges.shape}")
+            raise ValueError(f"Invalid query_edges dimensions: {query_edges.shape}")
 
         if query_edges.size(0) == 2 and query_edges.size(1) != 2:
             query_edges = query_edges.t().contiguous()
@@ -1073,7 +1062,7 @@ if os.path.exists(save_data_path):
 
     if not compatible:
         print(
-            "检测到缓存 split 与当前图节点数不兼容，重新生成 split。\n"
+            "The cached split is incompatible with the current number of graph nodes; regenerating the split.\n"
             f"cached_max_node_id={cached_max_node_id}, num_nodes={num_nodes}, "
             f"cache_path={save_data_path}"
         )
@@ -1103,9 +1092,9 @@ compatible, cached_max_node_id = is_link_data_compatible_with_num_nodes(
 
 if not compatible:
     raise ValueError(
-        "重新生成后的 link_data 仍然与当前 num_nodes 不兼容。\n"
+        "The regenerated link_data is still incompatible with the current num_nodes.\n"
         f"cached_max_node_id={cached_max_node_id}, num_nodes={num_nodes}。\n"
-        "请检查表达矩阵筛选、金标准映射和 link_class_split 输入图是否一致。"
+        "Please check whether expression-matrix filtering, gold-standard mapping, and the link_class_split input graph are consistent."
     )
 
 print("link_data max node id:", cached_max_node_id)
@@ -1195,7 +1184,7 @@ for split in list(link_data.keys()):
             dropout=args.dropout
         ).to(device)
     else:
-        raise ValueError(f"当前代码只整理了PSD-GRN路线，你的 args.method={args.method}")
+        raise ValueError(f"The current code only supports the PSD-GRN pipeline; your args.method={args.method}")
 
     optimizer = torch.optim.Adam(
         model.parameters(),
@@ -1209,7 +1198,7 @@ for split in list(link_data.keys()):
         eta_min=1e-4
     )
 
-    print("最终节点特征维度:", X_real.shape)
+    print("Final node feature dimensions:", X_real.shape)
     print("one_graph_features:", one_graph_features.shape)
     print("num_genes:", X_real.shape[0])
     print("stage_feature_dim:", one_graph_features.shape[2])
