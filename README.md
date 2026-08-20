@@ -27,10 +27,10 @@ cd src
 
 ### 2C Task: Directed Regulatory Edge Existence Prediction
 ```
-python train_psdgrn_2c.py --dataset 你的数据集 --expression_file 你的表达矩阵.csv --num_classes 2 --K 1 --q 0.1 --hidden 64 --lr 0.001 --weight_decay 0.05 --dropout 0.5 --epochs 1000 --patience 20 --checkpoint 25 --train_ratio 0.8 --val_ratio 0.1 --runs 5
+python train_psdgrn_2c.py --dataset hESC --expression_file ExpressionDate500.csv --num_classes 2 --K 1 --q 0.1 --hidden 64 --lr 0.001 --weight_decay 0.05 --dropout 0.5 --epochs 1000 --patience 20 --checkpoint 25 --train_ratio 0.8 --val_ratio 0.1 --runs 5
 ```
 
 ### 3C Task: Signed Regulation Prediction
 ```
-python train_psdgrn_3c.py --dataset 你的数据集 --expression_file 你的表达矩阵.csv --num_classes 3 --K 1 --q 0.1 --hidden 64 --lr 0.001 --weight_decay 0.05 --dropout 0.5 --epochs 1000 --patience 20 --checkpoint 25 --train_ratio 0.8 --val_ratio 0.1 --runs 5
+python train_psdgrn_3c.py --dataset hESC --expression_file ExpressionDate500.csv --num_classes 3 --K 1 --q 0.1 --hidden 64 --lr 0.001 --weight_decay 0.05 --dropout 0.5 --epochs 1000 --patience 20 --checkpoint 25 --train_ratio 0.8 --val_ratio 0.1 --runs 5
 ```
