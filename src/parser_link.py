@@ -6,7 +6,7 @@ def parameter_parser():
     parser.add_argument('--expression_file', type=str, required=True)
     parser.add_argument('--data_root', type=str, default=None)
     parser.add_argument('--output_root', type=str, default=None)
-    parser.add_argument('--epochs', type=int, default=1000) # 早停
+    parser.add_argument('--epochs', type=int, default=1000)
     parser.add_argument('--lr', type=float, default=1e-3)  # 5e-3、1e-3、1e-2
     parser.add_argument('--num_classes', type=int, default=3, help='Number of classes.')
 
